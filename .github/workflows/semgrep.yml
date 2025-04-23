@@ -1,35 +1,38 @@
-name: Semgrep Report HTML
-
+name: Semgrep Analysis
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 jobs:
-  semgrep-html-report:
+  security:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install Semgrep
-        run: pip install semgrep
-
-      - name: Run Semgrep and generate HTML report
+      # Instalar Semgrep y prospector-htm
+      - name: Set up tools (Semgrep + prospector-html)
         run: |
-          semgrep scan --config=auto --json > report.json
-          semgrep ci-reporter html --input report.json --output report.html
+          pip install semgrep prospector2html
 
-      - name: Upload HTML report to GitHub Pages
+      # Ejecutar análisis Semgrep en JSON
+      - name: Run Semgrep scan
+        run: semgrep scan --config='p/default' . --json --output semgrep.json
+
+      # Convertir a HTML con prospector-html
+      - name: Generate HTML report
+        run: |
+          mkdir -p html-report
+          prospector-html --input semgrep.json --output html-report/index.html --filter semgrep || true
+      
+      - name: Verify HTML report exists
+        run: test -f html-report/index.html
+
+      # Publicar en GitHub Pages
+      - name: Deploy HTML report to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
-          publish_branch: gh-pages
-          destination_dir: semgrep-report
+          publish_dir: html-report
+          publish_branch: gh-pages          
+          force_orphan: true
