@@ -1,0 +1,35 @@
+name: Semgrep Report HTML
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  semgrep-html-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep and generate HTML report
+        run: |
+          semgrep scan --config=auto --json > report.json
+          semgrep ci-reporter html --input report.json --output report.html
+
+      - name: Upload HTML report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+          destination_dir: semgrep-report
